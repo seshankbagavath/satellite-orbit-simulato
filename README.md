@@ -1,3 +1,5 @@
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/seshankbagavath/satellite-orbit-simulator/blob/main/satellite_orbit_simulator.ipynb)
+
 # 🛰️ Satellite Orbit Simulator
 
 A high-fidelity orbital trajectory propagator written in Python. It integrates the
