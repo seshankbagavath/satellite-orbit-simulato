@@ -1,5 +1,10 @@
 # 🛰️ Satellite Orbit Simulator
 
+[![tests](https://github.com/seshankbagavath/satellite-orbit-simulator/actions/workflows/tests.yml/badge.svg)](https://github.com/seshankbagavath/satellite-orbit-simulator/actions/workflows/tests.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+
 A high-fidelity orbital trajectory propagator written in Python. It integrates the
 equations of motion for a satellite around a central body using the two-body model
 augmented with **J2 oblateness** and **atmospheric drag** perturbations, then
@@ -140,16 +145,34 @@ reference → numerical propagation → quantified comparison.
 - Earth orientation simplified to uniform rotation (no nutation/precession).
 - No third-body, SRP, or higher-order gravity terms (extensible by design).
 
+## 🧪 Tests
+
+The engine ships with a `pytest` suite (20 tests) covering element↔state
+round trips, known orbital values (ISS period, geostationary period, Kepler's
+third law), conservation laws (energy and angular momentum in the two-body
+model), J2 perturbation behavior, and input validation. Continuous integration
+runs them on Python 3.10–3.12 via GitHub Actions on every push.
+
+```bash
+pip install -r requirements.txt pytest
+pytest
+```
+
 ## 📁 Project Structure
 
 ```
 satellite-orbit-simulator/
+├── .github/workflows/
+│   └── tests.yml                # CI: runs pytest on Python 3.10–3.12
 ├── docs/
 │   └── index.html               # Interactive web app (GitHub Pages)
+├── tests/
+│   └── test_orbit_simulator.py  # pytest suite (20 tests)
 ├── satellite_orbit_simulator.py     # Core library + demos
 ├── satellite_orbit_simulator.ipynb  # Core Colab notebook
 ├── orbit_validation.py              # Tier-1: SGP4 validation upgrade
 ├── orbit_validation.ipynb           # Validation Colab notebook
+├── pytest.ini
 ├── requirements.txt
 ├── README.md
 └── LICENSE
