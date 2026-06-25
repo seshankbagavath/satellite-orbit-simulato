@@ -451,56 +451,87 @@ function sizeRenderer() {
   if (camera) { camera.aspect = w / h; camera.updateProjectionMatrix(); }
 }
 
-// ---- Procedural Earth texture: blue ocean + green continent blobs ----
-// Drawn on a 2D canvas so the globe needs no external image. The shapes are
-// stylized (recognizable as land/sea, not a precise map), matching the clean
-// design aesthetic.
+// ---- Procedural Earth texture: blue ocean + real continent outlines ----
+// Drawn on a 2D canvas so the globe needs no external image. Continents are
+// simplified coastline polygons given as [longitude, latitude] vertices (deg),
+// projected equirectangularly — recognizable shapes, not stacked ellipses.
 function makeEarthTexture() {
-  const W = 1024, H = 512;
+  const W = 2048, H = 1024;
   const cv = document.createElement('canvas');
   cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
 
-  // Ocean base (near #D5FFFF, very light blue).
+  // Ocean base (light cyan, near #D5FFFF).
   ctx.fillStyle = '#D5FFFF';
   ctx.fillRect(0, 0, W, H);
 
-  // Stylized landmasses as clusters of soft green blobs. Coordinates are in
-  // [lon 0..1, lat 0..1] of the equirectangular map; each entry is a cluster.
-  const land = '#2E6B50';
-  const landDark = '#1F4D3A';
+  // lon: -180..180  -> x: 0..W ;  lat: 90..-90 -> y: 0..H
+  const X = lon => (lon + 180) / 360 * W;
+  const Y = lat => (90 - lat) / 180 * H;
 
-  // Each continent = array of [cx, cy, rx, ry] ellipse blobs (normalized).
-  const continents = [
-    // Americas (left)
-    [[0.20,0.34,0.05,0.10],[0.22,0.46,0.06,0.09],[0.24,0.58,0.05,0.12],[0.22,0.70,0.03,0.08]],
-    // Europe + Africa (center)
-    [[0.50,0.30,0.05,0.06],[0.52,0.46,0.07,0.12],[0.53,0.60,0.05,0.10]],
-    // Asia (center-right, large)
-    [[0.66,0.30,0.10,0.09],[0.74,0.36,0.07,0.07],[0.70,0.26,0.06,0.05]],
-    // Australia (lower right)
-    [[0.82,0.64,0.05,0.05]],
-    // Antarctica hint (bottom band)
-    [[0.50,0.95,0.45,0.05]],
+  // Simplified coastline polygons (hand-traced, low-vertex but recognizable).
+  // Each entry is one filled landmass: [[lon,lat], ...].
+  const LANDS = [
+    // North America
+    [[-168,65],[-164,60],[-156,58],[-152,60],[-141,70],[-128,70],[-114,69],
+     [-100,69],[-84,67],[-80,62],[-78,56],[-80,52],[-64,60],[-56,52],[-67,45],
+     [-70,42],[-74,40],[-76,35],[-81,31],[-81,25],[-90,29],[-97,28],[-97,22],
+     [-105,20],[-106,23],[-112,29],[-117,33],[-124,40],[-124,48],[-128,51],
+     [-135,58],[-148,60],[-158,56],[-165,60],[-168,65]],
+    // South America
+    [[-78,9],[-72,11],[-62,10],[-50,0],[-44,-2],[-35,-6],[-39,-13],[-48,-25],
+     [-48,-34],[-58,-35],[-65,-45],[-69,-52],[-74,-52],[-72,-44],[-73,-37],
+     [-71,-30],[-71,-18],[-76,-14],[-81,-5],[-79,2],[-78,9]],
+    // Africa
+    [[-17,15],[-16,21],[-10,27],[-6,36],[10,37],[20,32],[25,32],[34,31],[32,23],
+     [37,18],[43,12],[51,12],[42,-1],[40,-10],[40,-17],[35,-24],[26,-34],[18,-35],
+     [12,-17],[9,-1],[5,4],[-7,4],[-12,8],[-17,15]],
+    // Eurasia (Europe + Asia as one connected landmass — geographically correct)
+    [[-10,36],[-9,44],[-4,48],[2,51],[-2,52],[4,58],[10,58],[14,64],[24,66],
+     [30,70],[55,71],[75,73],[100,77],[125,73],[140,72],[160,70],[170,68],
+     [180,66],[180,60],[160,60],[150,59],[142,54],[135,48],[130,43],[122,40],
+     [122,31],[118,24],[108,21],[106,10],[100,8],[98,16],[92,21],[88,22],
+     [80,15],[77,8],[72,20],[67,25],[57,25],[48,30],[45,40],[40,46],[30,45],
+     [28,41],[20,40],[16,40],[8,44],[3,42],[-2,40],[-10,36]],
+    // Australia
+    [[114,-22],[122,-18],[130,-12],[137,-12],[142,-11],[146,-18],[150,-24],
+     [153,-28],[150,-38],[143,-39],[135,-35],[129,-32],[123,-34],[115,-34],
+     [114,-26],[114,-22]],
+    // Greenland
+    [[-46,60],[-30,60],[-22,70],[-20,76],[-32,83],[-50,82],[-58,76],[-54,68],[-46,60]],
+    // Antarctica (band across the bottom)
+    [[-180,-72],[-120,-74],[-60,-70],[0,-70],[60,-67],[120,-70],[180,-72],
+     [180,-90],[-180,-90],[-180,-72]],
+    // Madagascar
+    [[44,-12],[50,-15],[50,-25],[45,-25],[43,-18],[44,-12]],
+    // Japan
+    [[132,33],[137,36],[141,40],[142,45],[139,42],[135,35],[132,33]],
+    // British Isles
+    [[-6,50],[-3,53],[-5,58],[-8,57],[-10,52],[-6,50]],
+    // New Zealand
+    [[166,-46],[171,-44],[174,-41],[178,-38],[176,-41],[170,-46],[166,-46]],
   ];
 
-  function blob(cx, cy, rx, ry, color) {
-    ctx.fillStyle = color;
+  const land = '#2E6B50';
+  const edge = '#1F4D3A';
+
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2;
+  for (const poly of LANDS) {
     ctx.beginPath();
-    ctx.ellipse(cx*W, cy*H, rx*W, ry*H, 0, 0, Math.PI*2);
+    poly.forEach(([lon, lat], i) => {
+      const x = X(lon), y = Y(lat);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = land;
     ctx.fill();
+    ctx.strokeStyle = edge;     // subtle darker coastline
+    ctx.stroke();
   }
 
-  // Draw a soft darker underlayer, then the main green, for a little depth.
-  continents.forEach(cluster => {
-    cluster.forEach(([cx,cy,rx,ry]) => blob(cx, cy, rx*1.12, ry*1.12, landDark));
-  });
-  continents.forEach(cluster => {
-    cluster.forEach(([cx,cy,rx,ry]) => blob(cx, cy, rx, ry, land));
-  });
-
   const tex = new THREE.CanvasTexture(cv);
-  tex.anisotropy = 4;
+  tex.anisotropy = 8;
   return tex;
 }
 
