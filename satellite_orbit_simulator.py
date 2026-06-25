@@ -335,17 +335,22 @@ class PropagationResult:
         return np.linalg.norm(self.positions, axis=0) - self.body.radius
 
 
-def propagate(elem: OrbitalElements,
-              duration_s: float,
-              body: CentralBody = EARTH,
-              cfg: Optional[PropagatorConfig] = None,
-              n_samples: int = 2000) -> PropagationResult:
-    """Numerically propagate an orbit forward in time.
+def propagate_from_state(state0: NDArray[np.float64],
+                         duration_s: float,
+                         body: CentralBody = EARTH,
+                         cfg: Optional[PropagatorConfig] = None,
+                         n_samples: int = 2000) -> PropagationResult:
+    """Numerically propagate forward in time from a raw ECI state vector.
+
+    This is the low-level entry point. It accepts a 6-element state
+    [x, y, z, vx, vy, vz] (km, km/s) directly, which is what you want when the
+    initial condition comes from an external source such as an SGP4 ephemeris
+    rather than from classical elements.
 
     Parameters
     ----------
-    elem : OrbitalElements
-        Initial orbital state.
+    state0 : ndarray, shape (6,)
+        Initial [position, velocity] in the inertial frame (km, km/s).
     duration_s : float
         Propagation horizon in seconds (must be > 0).
     body : CentralBody
@@ -366,19 +371,23 @@ def propagate(elem: OrbitalElements,
     RuntimeError
         If the underlying integrator fails to converge.
     """
+    state0 = np.asarray(state0, dtype=float).reshape(-1)
+    if state0.shape[0] != 6:
+        raise ValueError(
+            f"state0 must have 6 elements [x,y,z,vx,vy,vz], got {state0.shape[0]}."
+        )
     if duration_s <= 0:
         raise ValueError(f"duration_s must be positive, got {duration_s}.")
     if n_samples < 2:
         raise ValueError("n_samples must be at least 2.")
 
     cfg = cfg or PropagatorConfig()
-    state0 = elements_to_state(elem, body.mu)
 
-    # Sanity check: the initial orbit must clear the surface.
+    # Sanity check: the initial position must clear the surface.
     if np.linalg.norm(state0[:3]) <= body.radius:
         raise ValueError(
             "Initial position is inside the central body. "
-            "Increase the semi-major axis / periapsis altitude."
+            "Increase the periapsis altitude."
         )
 
     t_eval = np.linspace(0.0, duration_s, n_samples)
@@ -414,6 +423,38 @@ def propagate(elem: OrbitalElements,
         reentered=reentered,
         raw=sol,
     )
+
+
+def propagate(elem: OrbitalElements,
+              duration_s: float,
+              body: CentralBody = EARTH,
+              cfg: Optional[PropagatorConfig] = None,
+              n_samples: int = 2000) -> PropagationResult:
+    """Numerically propagate an orbit forward in time from classical elements.
+
+    Thin convenience wrapper over :func:`propagate_from_state` that first
+    converts Keplerian elements into an ECI state vector.
+
+    Parameters
+    ----------
+    elem : OrbitalElements
+        Initial orbital state.
+    duration_s : float
+        Propagation horizon in seconds (must be > 0).
+    body : CentralBody
+        Central gravitating body. Defaults to Earth.
+    cfg : PropagatorConfig, optional
+        Force-model configuration. Defaults to two-body + J2.
+    n_samples : int
+        Number of evenly spaced output samples to return.
+
+    Returns
+    -------
+    PropagationResult
+    """
+    state0 = elements_to_state(elem, body.mu)
+    return propagate_from_state(state0, duration_s, body=body, cfg=cfg,
+                                n_samples=n_samples)
 
 
 # ==============================================================================
