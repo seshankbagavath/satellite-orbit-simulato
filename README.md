@@ -7,8 +7,6 @@ equations of motion for a satellite around a central body using the two-body mod
 augmented with **J2 oblateness** and **atmospheric drag** perturbations, then
 visualizes the results with publication-quality charts.
 
-> **Difficulty:** Advanced · **Core topics:** Orbital mechanics, numerical methods
-
 ---
 
 ## ✨ Features
