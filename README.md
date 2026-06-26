@@ -57,6 +57,10 @@ this model intentionally doesn't (drag tuning, higher-order harmonics).
 - **Analyzes and visualizes** — orbital period, an energy-conservation
   diagnostic, Earth-rotation-aware ground tracks, plus 3D trajectory and
   altitude/energy plots.
+- **Plans orbital maneuvers** — Hohmann and bi-elliptic transfer planners and a
+  universal-variable **Lambert solver**, validated against textbook results
+  (Curtis 5.2 to four decimals). The web app draws both transfer paths live and
+  shows which method wins on delta-v at a given radius ratio.
 
 ## 📊 Example output
 
@@ -128,10 +132,11 @@ genuine physics rather than numerical error.
 
 ## 🧪 Tests
 
-A `pytest` suite of 20 tests covers element↔state round trips, known orbital
+A `pytest` suite of 33 tests covers element↔state round trips, known orbital
 values (ISS period, geostationary period, Kepler's third law), conservation of
-energy and angular momentum, J2 perturbation behavior, and input validation.
-GitHub Actions runs the suite on Python 3.10–3.12 on every push.
+energy and angular momentum, J2 perturbation behavior, input validation, and the
+maneuver routines (Hohmann/bi-elliptic delta-v and the Lambert solver against
+Curtis 5.2). GitHub Actions runs the suite on Python 3.10–3.12 on every push.
 
 ```bash
 pip install -r requirements.txt pytest
@@ -156,11 +161,13 @@ satellite-orbit-simulator/
 ├── docs/
 │   └── index.html               # Interactive web app (GitHub Pages)
 ├── tests/
-│   └── test_orbit_simulator.py  # pytest suite (20 tests)
+│   ├── test_orbit_simulator.py  # propagator tests
+│   └── test_maneuvers.py        # transfer / Lambert tests
 ├── satellite_orbit_simulator.py     # Core library + demos
 ├── satellite_orbit_simulator.ipynb  # Core Colab notebook
 ├── orbit_validation.py              # SGP4 validation pipeline
 ├── orbit_validation.ipynb           # Validation Colab notebook
+├── orbital_maneuvers.py             # Hohmann / bi-elliptic / Lambert
 ├── pytest.ini
 ├── requirements.txt
 ├── README.md
