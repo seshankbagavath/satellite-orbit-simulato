@@ -289,6 +289,19 @@
         </div>
         <label class="switch"><input type="checkbox" id="t-anim" checked /><span class="slider-sw"></span></label>
       </div>
+
+      <div class="control" style="margin-top:14px; margin-bottom:0;">
+        <div class="control-head" style="margin-bottom:9px;">
+          <span class="name">Simulation speed</span><span class="val" id="v-speed">1×</span>
+        </div>
+        <div class="presets" id="speed-chips" style="margin-bottom:0;">
+          <button class="chip" data-speed="0.5">0.5×</button>
+          <button class="chip active" data-speed="1">1×</button>
+          <button class="chip" data-speed="2">2×</button>
+          <button class="chip" data-speed="5">5×</button>
+          <button class="chip" data-speed="10">10×</button>
+        </div>
+      </div>
     </div>
 
     <!-- ===== Transfer Planner ===== -->
@@ -515,6 +528,7 @@ const SCALE = 1 / 1000; // km -> scene units
 
 // Camera orbit state (declared early — syncFromControls() writes camDist).
 let camTheta = Math.PI/4, camPhi = Math.PI/3, camDist = 30;
+let simSpeed = 1;    // user-controlled simulation speed multiplier
 
 function sizeRenderer() {
   const w = canvas.clientWidth, h = 520;
@@ -1005,6 +1019,16 @@ document.getElementById('s-talt').addEventListener('input', e => {
   syncFromControls();
 });
 
+// Simulation speed chips.
+document.querySelectorAll('#speed-chips .chip').forEach(chip => {
+  chip.onclick = () => {
+    document.querySelectorAll('#speed-chips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    simSpeed = parseFloat(chip.dataset.speed);
+    document.getElementById('v-speed').textContent = chip.dataset.speed + '×';
+  };
+});
+
 // Method chips (Hohmann / Bi-elliptic).
 document.querySelectorAll('#method-chips .chip').forEach(chip => {
   chip.onclick = () => {
@@ -1066,7 +1090,7 @@ const TIME_SCALE = 200;
 
 function animate() {
   requestAnimationFrame(animate);
-  const dt = 1/60;
+  const dt = (1/60) * simSpeed;
   simClock += dt * TIME_SCALE;
 
   // J2 nodal regression: advance RAAN over (sped-up) time.
